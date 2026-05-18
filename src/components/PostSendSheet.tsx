@@ -33,14 +33,9 @@ async function uploadAndAttach(file: File, sendId: string): Promise<void> {
 export function PostSendSheet({ sendId, grade, onDone }: PostSendSheetProps) {
   const [state, setState] = useState<State>('idle')
   const galleryRef = useRef<HTMLInputElement>(null)
-  const captureRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    // Reset input so the same file can be re-selected after an error
-    e.target.value = ''
+  async function processFile(file: File) {
     setState('uploading')
     try {
       await uploadAndAttach(file, sendId)
@@ -49,6 +44,30 @@ export function PostSendSheet({ sendId, grade, onDone }: PostSendSheetProps) {
     } catch {
       setState('error')
     }
+  }
+
+  function handleGalleryChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) processFile(file)
+  }
+
+  // Create the input dynamically — display:none blocks capture on Android Chrome
+  function openCamera() {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*,video/*'
+    input.setAttribute('capture', 'environment')
+    const cleanup = () => input.remove()
+    input.addEventListener('change', () => {
+      const file = input.files?.[0]
+      cleanup()
+      if (file) processFile(file)
+    })
+    // cancel fires on most modern browsers when the picker is dismissed without a selection
+    input.addEventListener('cancel', cleanup)
+    document.body.appendChild(input)
+    input.click()
   }
 
   return (
@@ -74,21 +93,11 @@ export function PostSendSheet({ sendId, grade, onDone }: PostSendSheetProps) {
             <p className="text-neutral-400 text-sm mt-1">Want to add a photo or video?</p>
           </div>
 
-          {/* Gallery picker — no capture attribute, opens file browser / gallery */}
           <input
             ref={galleryRef}
             type="file"
             accept="image/*,video/*"
-            onChange={handleFile}
-            className="hidden"
-          />
-          {/* Camera capture — opens camera directly */}
-          <input
-            ref={captureRef}
-            type="file"
-            accept="image/*,video/*"
-            capture="environment"
-            onChange={handleFile}
+            onChange={handleGalleryChange}
             className="hidden"
           />
 
@@ -100,11 +109,11 @@ export function PostSendSheet({ sendId, grade, onDone }: PostSendSheetProps) {
 
           <div className="flex flex-col gap-3">
             <button
-              onClick={() => captureRef.current?.click()}
+              onClick={openCamera}
               disabled={state === 'uploading'}
               className="w-full py-4 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-bold text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
             >
-              {state === 'uploading' ? 'Uploading...' : '📷  Take Photo or Video'}
+              {state === 'uploading' ? 'Uploading...' : 'Take Photo or Video'}
             </button>
             <button
               onClick={() => galleryRef.current?.click()}

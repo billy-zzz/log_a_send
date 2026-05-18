@@ -22,7 +22,6 @@ const MIME_TO_EXT: Record<string, string> = {
 const MAX_BYTES = 100 * 1024 * 1024 // 100 MB
 
 export async function POST(request: NextRequest) {
-  // Skip upload in local dev when no token is configured
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     log('WARN', 'upload: BLOB_READ_WRITE_TOKEN not set, skipping upload')
     return NextResponse.json({ photoUrl: null })

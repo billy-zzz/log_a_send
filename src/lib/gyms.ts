@@ -203,6 +203,8 @@ export const GYMS: Gym[] = [
   { id: 'the-rock-darwin',                name: 'The Rock',                          city: 'Darwin',         country: 'AU' },
 ]
 
+const GYM_BY_ID = new Map(GYMS.map((g) => [g.id, g]))
+
 export function filterGyms(query: string): Gym[] {
   const q = query.toLowerCase().trim()
   if (!q) return GYMS
@@ -212,11 +214,10 @@ export function filterGyms(query: string): Gym[] {
 }
 
 export function getGymById(id: string): Gym | undefined {
-  return GYMS.find((g) => g.id === id)
+  return GYM_BY_ID.get(id)
 }
 
-/** Resolves a gymId to a display name, handling both static gyms and custom: prefixed entries. */
 export function getGymName(gymId: string): string {
   if (gymId.startsWith('custom:')) return gymId.slice(7)
-  return getGymById(gymId)?.name ?? gymId
+  return GYM_BY_ID.get(gymId)?.name ?? gymId
 }

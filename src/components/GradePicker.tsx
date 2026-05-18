@@ -9,9 +9,10 @@ const ITEM_W = 80
 interface GradePickerProps {
   grades: { grade: string; score: number }[]
   onChange: (grade: string, score: number) => void
+  className?: string
 }
 
-export function GradePicker({ grades, onChange }: GradePickerProps) {
+export function GradePicker({ grades, onChange, className }: GradePickerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const x = useMotionValue(0)
   const [idx, setIdx] = useState(0)
@@ -42,8 +43,8 @@ export function GradePicker({ grades, onChange }: GradePickerProps) {
   }
 
   return (
-    <div ref={containerRef} className="relative overflow-hidden h-24 select-none">
-      <div className="pointer-events-none absolute inset-y-3 left-1/2 -translate-x-1/2 w-20 rounded-xl border-2 border-orange-500 bg-orange-500/10" />
+    <div ref={containerRef} className={`relative overflow-hidden select-none ${className ?? 'h-16'}`}>
+      <div className="pointer-events-none absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-20 h-12 rounded-xl border-2 border-orange-500 bg-orange-500/10" />
       <motion.div
         drag="x"
         dragConstraints={bounds}
@@ -62,7 +63,7 @@ export function GradePicker({ grades, onChange }: GradePickerProps) {
               opacity: Math.max(0.2, 1 - Math.abs(i - idx) * 0.3),
             }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className={`w-20 flex-shrink-0 h-full flex items-center justify-center font-display font-bold text-xl ${
+            className={`w-20 flex-shrink-0 h-full flex items-center justify-center font-display font-bold text-2xl ${
               i === idx ? 'text-white' : 'text-neutral-500'
             }`}
           >

@@ -1,13 +1,21 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import Image from 'next/image'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { motion, useMotionValue, animate } from 'framer-motion'
 import type { SendRecord } from '@/lib/types'
 import { getGymName } from '@/lib/gyms'
+import { MountainIcon } from './icons'
 
 async function fetchSends(userId: string): Promise<SendRecord[]> {
   const res = await fetch(`/api/sends?userId=${encodeURIComponent(userId)}`)
   if (!res.ok) throw new Error('Failed to load sends')
   return (await res.json()).sends
+}
+
+async function deleteSendRequest(id: string, userId: string): Promise<void> {
+  const res = await fetch(`/api/sends/${id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error('Delete failed')
 }
 
 function isVideo(url: string): boolean {
@@ -50,18 +58,71 @@ function groupSendsByDate(sends: SendRecord[]): { label: string; sends: SendReco
   return Array.from(groups.entries()).map(([label, items]) => ({ label, sends: items }))
 }
 
-function MountainIcon() {
+const REVEAL_W = 72
+
+function SwipeToDelete({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
+  const x = useMotionValue(0)
+
+  function handleDragEnd() {
+    animate(x, x.get() < -(REVEAL_W / 2) ? -REVEAL_W : 0, {
+      type: 'spring', stiffness: 500, damping: 40,
+    })
+  }
+
+  function handleDelete() {
+    animate(x, 0, { type: 'spring', stiffness: 500, damping: 40 })
+    onDelete()
+  }
+
   return (
-    <svg width="20" height="18" viewBox="0 0 20 18" fill="currentColor" className="text-neutral-600">
-      <path d="M10 0L20 18H0L10 0Z" />
-    </svg>
+    <div className="relative rounded-2xl overflow-hidden">
+      <div
+        className="absolute right-0 inset-y-0 bg-red-500 flex items-center justify-center"
+        style={{ width: REVEAL_W }}
+      >
+        <button
+          onClick={handleDelete}
+          className="w-full h-full flex items-center justify-center text-white text-xs font-bold uppercase tracking-wide"
+        >
+          Delete
+        </button>
+      </div>
+      <motion.div
+        style={{ x }}
+        drag="x"
+        dragDirectionLock
+        dragConstraints={{ left: -REVEAL_W, right: 0 }}
+        dragElastic={0}
+        onDragEnd={handleDragEnd}
+      >
+        {children}
+      </motion.div>
+    </div>
   )
 }
 
 export function RecentSends({ userId }: { userId: string }) {
+  const queryClient = useQueryClient()
+
   const { data: sends, isLoading, isError } = useQuery<SendRecord[]>({
     queryKey: ['sends', userId],
     queryFn: () => fetchSends(userId),
+  })
+
+  const { mutate: deleteSend } = useMutation({
+    mutationFn: (id: string) => deleteSendRequest(id, userId),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['sends', userId] })
+      const prev = queryClient.getQueryData<SendRecord[]>(['sends', userId])
+      queryClient.setQueryData<SendRecord[]>(['sends', userId], old => old?.filter(s => s.id !== id) ?? [])
+      return { prev }
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['sends', userId], ctx.prev)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['sends', userId] })
+    },
   })
 
   if (isLoading) return (
@@ -77,7 +138,7 @@ export function RecentSends({ userId }: { userId: string }) {
   if (!sends?.length) return (
     <div className="text-center py-16 flex flex-col items-center gap-4">
       <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center">
-        <MountainIcon />
+        <MountainIcon width={13} height={12} className="text-neutral-600" />
       </div>
       <div>
         <p className="text-white font-semibold">Nothing logged yet</p>
@@ -89,7 +150,7 @@ export function RecentSends({ userId }: { userId: string }) {
   const groups = groupSendsByDate(sends)
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="h-full overflow-y-auto flex flex-col gap-6">
       {groups.map(({ label, sends: groupSends }) => (
         <div key={label}>
           <div className="flex items-center gap-2 mb-3">
@@ -102,34 +163,36 @@ export function RecentSends({ userId }: { userId: string }) {
             {groupSends.map((send) => {
               const gymName = getGymName(send.gymId)
               return (
-                <div key={send.id} className="bg-neutral-800 rounded-2xl flex items-stretch overflow-hidden">
-                  <div className={`w-1 flex-shrink-0 ${gradeAccentColor(send.score)}`} />
-                  <div className="flex-1 p-4 flex gap-4 items-start">
-                    {send.photoUrl && (
-                      isVideo(send.photoUrl)
-                        ? <video src={send.photoUrl} className="w-14 h-14 object-cover rounded-xl flex-shrink-0" muted playsInline preload="metadata" />
-                        : <img src={send.photoUrl} alt="Send" className="w-14 h-14 object-cover rounded-xl flex-shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <span className="font-display text-2xl font-black text-white leading-none">{send.grade}</span>
-                        <span className="text-xs text-neutral-500 px-2 py-0.5 bg-neutral-700 rounded-full">
-                          {send.scale === 'V' ? 'V Scale' : 'Font'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-neutral-500 mb-1 truncate">{gymName}</p>
-                      <p className="text-xs text-neutral-400">
-                        {send.attempts} attempt{send.attempts !== 1 ? 's' : ''}
-                      </p>
-                      {send.notes && (
-                        <p className="text-xs text-neutral-500 mt-1 truncate">{send.notes}</p>
+                <SwipeToDelete key={send.id} onDelete={() => deleteSend(send.id)}>
+                  <div className="bg-neutral-800 flex items-stretch">
+                    <div className={`w-1 flex-shrink-0 ${gradeAccentColor(send.score)}`} />
+                    <div className="flex-1 p-4 flex gap-4 items-start">
+                      {send.photoUrl && (
+                        isVideo(send.photoUrl)
+                          ? <video src={send.photoUrl} className="w-14 h-14 object-cover rounded-xl flex-shrink-0" muted playsInline preload="metadata" />
+                          : <Image src={send.photoUrl} alt={`${send.grade} send`} width={56} height={56} className="w-14 h-14 object-cover rounded-xl flex-shrink-0" />
                       )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2 mb-1">
+                          <span className="font-display text-2xl font-black text-white leading-none">{send.grade}</span>
+                          <span className="text-xs text-neutral-500 px-2 py-0.5 bg-neutral-700 rounded-full">
+                            {send.scale === 'V' ? 'V Scale' : 'Font'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-500 mb-1 truncate">{gymName}</p>
+                        <p className="text-xs text-neutral-400">
+                          {send.attempts} attempt{send.attempts !== 1 ? 's' : ''}
+                        </p>
+                        {send.notes && (
+                          <p className="text-xs text-neutral-500 mt-1 truncate">{send.notes}</p>
+                        )}
+                      </div>
+                      <span className="text-xs text-neutral-600 flex-shrink-0 pt-0.5">
+                        {new Date(send.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
-                    <span className="text-xs text-neutral-600 flex-shrink-0 pt-0.5">
-                      {new Date(send.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
                   </div>
-                </div>
+                </SwipeToDelete>
               )
             })}
           </div>

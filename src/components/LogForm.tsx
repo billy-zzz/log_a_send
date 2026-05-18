@@ -8,6 +8,7 @@ import { GymPicker } from './GymPicker'
 import { PostSendSheet } from './PostSendSheet'
 import { USER_ID, getLastGymId, setLastGymId } from '@/user'
 import type { Gym } from '@/lib/gyms'
+import { clampAttempts, parseAttemptsInput, MIN_ATTEMPTS } from '@/lib/attempts'
 
 const GRADE_LIST = { V: V_GRADES, Font: FONT_GRADES }
 
@@ -49,22 +50,21 @@ export function LogForm({ onSuccess }: { onSuccess?: () => void }) {
   }
 
   function adjustAttempts(delta: number) {
-    const next = Math.max(1, Math.min(999, attempts + delta))
+    const next = clampAttempts(attempts + delta)
     setAttempts(next)
     setAttemptsInput(String(next))
   }
 
   function handleAttemptsInput(val: string) {
     setAttemptsInput(val)
-    const n = parseInt(val, 10)
-    if (!isNaN(n) && n >= 1) setAttempts(Math.min(999, n))
+    const parsed = parseAttemptsInput(val)
+    if (parsed !== null) setAttempts(parsed)
   }
 
   function handleAttemptsBlur() {
-    const n = parseInt(attemptsInput, 10)
-    const clamped = isNaN(n) || n < 1 ? 1 : Math.min(999, n)
-    setAttempts(clamped)
-    setAttemptsInput(String(clamped))
+    const next = parseAttemptsInput(attemptsInput) ?? MIN_ATTEMPTS
+    setAttempts(next)
+    setAttemptsInput(String(next))
   }
 
   const { mutate, isPending } = useMutation({
@@ -108,13 +108,11 @@ export function LogForm({ onSuccess }: { onSuccess?: () => void }) {
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <form onSubmit={handleSubmit} className="h-full flex flex-col gap-3">
 
-        {/* Gym */}
         <GymPicker selectedGymId={gymId} onChange={handleGymChange} />
 
-        {/* Scale toggle */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">Scale</label>
           <div className="relative flex bg-neutral-800 rounded-xl p-1">
             <div
@@ -139,24 +137,19 @@ export function LogForm({ onSuccess }: { onSuccess?: () => void }) {
           </div>
         </div>
 
-        {/* Grade */}
-        <div className="flex flex-col gap-2">
+        <div className="flex-1 min-h-0 flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">Grade</label>
-          <div className="text-center py-2">
-            <span className="font-display text-7xl font-black text-white leading-none">{grade}</span>
-          </div>
-          <GradePicker grades={GRADE_LIST[scale]} onChange={(g, s) => { setGrade(g); setScore(s) }} />
+          <GradePicker grades={GRADE_LIST[scale]} onChange={(g, s) => { setGrade(g); setScore(s) }} className="flex-1 min-h-0" />
         </div>
 
-        {/* Attempts */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">Attempts</label>
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => adjustAttempts(-1)}
               disabled={attempts <= 1}
-              className="w-11 h-11 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white text-xl font-bold flex items-center justify-center transition-colors active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+              className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white text-xl font-bold flex items-center justify-center transition-colors active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
             >
               −
             </button>
@@ -166,39 +159,37 @@ export function LogForm({ onSuccess }: { onSuccess?: () => void }) {
               value={attemptsInput}
               onChange={(e) => handleAttemptsInput(e.target.value)}
               onBlur={handleAttemptsBlur}
-              className="flex-1 text-center bg-neutral-800 rounded-xl py-2.5 text-white font-display text-3xl font-black focus:outline-none focus:ring-2 focus:ring-orange-500 tabular-nums"
+              className="flex-1 min-w-0 text-center bg-neutral-800 rounded-xl py-2 text-white font-display text-3xl font-black focus:outline-none focus:ring-2 focus:ring-orange-500 tabular-nums"
             />
             <button
               type="button"
               onClick={() => adjustAttempts(1)}
-              className="w-11 h-11 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white text-xl font-bold flex items-center justify-center transition-colors active:scale-95 flex-shrink-0"
+              className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white text-xl font-bold flex items-center justify-center transition-colors active:scale-95 flex-shrink-0"
             >
               +
             </button>
           </div>
         </div>
 
-        {/* Notes */}
-        <div className="flex flex-col gap-2">
+        <div className="flex-1 min-h-0 flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">Notes</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             maxLength={1000}
-            rows={3}
             placeholder="Beta, conditions, how it felt..."
-            className="bg-neutral-800 rounded-2xl px-4 py-3 text-white text-sm placeholder:text-neutral-600 resize-none focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="flex-1 min-h-0 bg-neutral-800 rounded-2xl px-4 py-2 text-white text-sm placeholder:text-neutral-600 resize-none focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
 
         {error && (
-          <p className="text-red-400 text-sm bg-red-500/10 rounded-xl px-4 py-3">{error}</p>
+          <p className="text-red-400 text-sm bg-red-500/10 rounded-xl px-4 py-2">{error}</p>
         )}
 
         <button
           type="submit"
           disabled={isPending}
-          className="w-full py-4 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-bold text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
+          className="w-full py-3 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-bold text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
         >
           {isPending ? 'Logging...' : 'Log Send'}
         </button>

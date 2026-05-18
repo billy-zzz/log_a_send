@@ -1,75 +1,46 @@
 # Log A Send
 
-A mobile-first web app for boulderers to track their sends — log a problem, grade it in V Scale or Fontainebleau, record how many attempts it took, and optionally attach a photo or video. All sends are persisted in real time so you can review your full session at the end of a climbing day.
+A mobile-first bouldering tracker. Log a send, pick a grade, attach a photo or video if you have one. Session history is there at the end of the day.
 
----
-
-## Stack
-
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 15 (App Router) |
-| Language | TypeScript (strict) |
-| Database | PostgreSQL via Prisma ORM, hosted on Neon |
-| Media storage | Vercel Blob |
-| Frontend state | TanStack Query v5 |
-| Animations | Framer Motion |
-| Styling | Tailwind CSS v4 |
-| Testing | Vitest |
-| Deploy | Vercel (CI via GitHub Actions) |
+**Try it here: [log-a-send.vercel.app](https://log-a-send.vercel.app)**
 
 ---
 
 ## Architecture
 
-### Handler → Service → Repository
-
-The API layer follows a strict three-tier separation. Next.js route handlers (`app/api/**/route.ts`) own HTTP concerns: parse the request, validate input with Zod, call a service, return a response. The service layer (`src/services/sendService.ts`) owns all business logic and has no knowledge of HTTP or the database driver. The database is accessed exclusively through Prisma. This separation means business logic is unit-testable without any HTTP or database infrastructure.
+Two layers: route handlers own HTTP and validation, services own business logic and Prisma. No repo tier — for one entity it's ceremony, and it's one file to add if that changes.
 
 ```mermaid
 graph TD
-    Client -->|HTTP| Handler["Route Handler<br/>(input validation, HTTP)"]
-    Handler -->|typed args| Service["Service<br/>(business logic)"]
-    Service -->|Prisma| DB[(PostgreSQL)]
+    Client -->|HTTP| Handler["Route Handler<br/>(Zod validation, HTTP shaping)"]
+    Handler -->|typed args| Service["Service<br/>(business logic + Prisma)"]
+    Service -->|SQL| DB[(PostgreSQL on Neon)]
 ```
 
-### Why PostgreSQL + Prisma instead of a simpler store?
+The non-obvious decision is idempotency. Every write computes a key (`userId#gymId#grade#minute`) backed by a DB unique constraint. If the client retries after a timeout it gets the original record back — no client-side dedup, no cache to invalidate.
 
-The primary driver was idempotency. Every send is written with a computed `idempotencyKey` (`userId#gymId#grade#minute`) backed by a Postgres unique constraint. If the client retries a POST after a timeout, the server catches the `P2002` constraint violation and returns the existing record — no duplicates, no client-side deduplication logic needed. Prisma adds a compound index on `(userId, sentAt DESC)` for efficient per-user session queries, and schema migrations keep the data model explicit and version-controlled.
+Frontend state is TanStack Query. Sends use an optimistic insert that rolls back the snapshot on error. No global store.
 
-### Why TanStack Query for state?
-
-Server state (the sends list) lives entirely in the TanStack Query cache: fetching, caching, and invalidation are all handled there. When a send is submitted, the mutation performs an **optimistic update** — the new entry appears instantly in the Today tab while the request is in-flight, and rolls back cleanly if the server returns an error. There is no global store to maintain; the view stays in sync automatically once the mutation settles.
-
-### Auth placeholder
-
-User identity is currently a UUID generated and persisted in `localStorage` (`src/user.ts`). This is intentional and explicitly marked as a placeholder. Adding an auth provider (e.g. Clerk or NextAuth) would replace this single import site without touching any service or handler code.
+Auth is a `localStorage` UUID — intentional placeholder. Swapping in Clerk or NextAuth touches `src/user.ts` and adds one guard to each handler; the service layer is unchanged.
 
 ---
 
-## Getting Started
+## Stack
+
+Next.js 15 (App Router), React 19, Tailwind v4, TanStack Query v5, Framer Motion. PostgreSQL on Neon via Prisma. Vercel Blob for media. Vitest for tests. Deployed on Vercel.
+
+---
+
+## Running locally
 
 ```sh
-# Install dependencies
 npm install
-
-# Set up environment variables
-cp .env.example .env
-# Fill in DATABASE_URL and BLOB_READ_WRITE_TOKEN
-
-# Push the schema to your database
+cp .env.example .env  # fill in DATABASE_URL; BLOB_READ_WRITE_TOKEN is optional
 npm run db:push
-
-# Start the dev server
 npm run dev
 ```
 
-### Environment variables
-
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string (Neon or local) |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob token for photo/video uploads |
+No Vercel Blob account needed — the upload endpoint returns `{ photoUrl: null }` when the token isn't set.
 
 ---
 
@@ -79,4 +50,16 @@ npm run dev
 npm test
 ```
 
-Vitest unit tests cover the service layer, all API route handlers (happy path + validation errors), and the gym search utilities. The CI pipeline (`test → typecheck → deploy`) enforces this on every push.
+Vitest covers the service layer, all route handlers (happy path + validation errors), gym search, and the `clampAttempts` helper. Handler tests mock the service — unit tests, not integration. A real DB-backed suite is the obvious next step.
+
+CI runs `typecheck → test` on every push. Vercel deploys from `main` independently.
+
+---
+
+## Known limitations
+
+- **Auth is a placeholder.** `localStorage` UUID — fine for a personal tracker, not for anything multi-user.
+- **No per-user upload quotas.** MIME whitelist and 100 MB cap exist; rate limiting doesn't.
+- **No correlation IDs** in the logger, so tracing a single request across log lines takes manual effort.
+- **No integration tests** against a real database.
+- **Single photo per send**, no pagination on history.

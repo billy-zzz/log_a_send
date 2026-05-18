@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { attachPhoto } from '@/services/sendService'
+import { attachPhoto, deleteSend } from '@/services/sendService'
 import { log } from '@/lib/logger'
 
 const PatchSchema = z.object({
@@ -36,4 +36,26 @@ export async function PATCH(
 
   log('INFO', 'attachPhoto: completed', { id })
   return NextResponse.json({ status: 'success' })
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const userId = request.nextUrl.searchParams.get('userId')
+  const parsed = z.string().uuid().safeParse(userId)
+  if (!parsed.success) {
+    log('WARN', 'deleteSend: invalid userId', { id })
+    return NextResponse.json({ error: 'Valid userId required' }, { status: 400 })
+  }
+
+  const result = await deleteSend(id, parsed.data)
+  if (result === 'not_found') {
+    log('WARN', 'deleteSend: send not found or not owned by user', { id })
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  log('INFO', 'deleteSend: completed', { id })
+  return new NextResponse(null, { status: 204 })
 }

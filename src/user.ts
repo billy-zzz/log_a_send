@@ -1,4 +1,4 @@
-// Persists a stable user ID across page reloads (placeholder until auth is added)
+// placeholder until real auth is added
 export const USER_ID = (() => {
   if (typeof window === 'undefined') return ''
   const stored = localStorage.getItem('logasend_uid')
