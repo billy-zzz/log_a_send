@@ -46,12 +46,9 @@ export async function attachPhoto(
   return result.count > 0 ? 'success' : 'not_found'
 }
 
-export async function getRecentSends(userId: string): Promise<SendRecord[]> {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
+export async function getAllSends(userId: string): Promise<SendRecord[]> {
   const sends = await db.send.findMany({
-    where: { userId, sentAt: { gte: today } },
+    where: { userId },
     orderBy: { sentAt: 'desc' },
   })
 

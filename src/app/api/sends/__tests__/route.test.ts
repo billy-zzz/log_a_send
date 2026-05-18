@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { mockLogSend, mockGetRecentSends } = vi.hoisted(() => ({
-  mockLogSend:        vi.fn(),
-  mockGetRecentSends: vi.fn(),
+const { mockLogSend, mockGetAllSends } = vi.hoisted(() => ({
+  mockLogSend:     vi.fn(),
+  mockGetAllSends: vi.fn(),
 }))
 
 vi.mock('@/services/sendService', () => ({
-  logSend:        mockLogSend,
-  getRecentSends: mockGetRecentSends,
+  logSend:   mockLogSend,
+  getAllSends: mockGetAllSends,
 }))
 
 vi.mock('@/lib/logger', () => ({ log: vi.fn() }))
@@ -46,13 +46,13 @@ describe('GET /api/sends', () => {
   })
 
   it('returns 200 with sends array for a valid userId', async () => {
-    mockGetRecentSends.mockResolvedValue([])
+    mockGetAllSends.mockResolvedValue([])
     const req = new NextRequest(`http://localhost/api/sends?userId=${VALID_USER_ID}`)
     const res = await GET(req)
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.sends).toEqual([])
-    expect(mockGetRecentSends).toHaveBeenCalledWith(VALID_USER_ID)
+    expect(mockGetAllSends).toHaveBeenCalledWith(VALID_USER_ID)
   })
 })
 

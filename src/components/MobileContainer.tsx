@@ -10,8 +10,8 @@ function MountainIcon() {
 
 export function MobileContainer({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-neutral-950 flex justify-center">
-      <div className="w-full max-w-[480px] flex flex-col bg-neutral-900 min-h-screen shadow-2xl">
+    <div className="h-dvh bg-neutral-950 flex justify-center overflow-hidden">
+      <div className="w-full max-w-[480px] flex flex-col bg-neutral-900 h-full shadow-2xl">
         <header className="flex-shrink-0 flex items-center gap-2.5 px-5 pt-6 pb-4">
           <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center text-white">
             <MountainIcon />

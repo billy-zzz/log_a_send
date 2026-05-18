@@ -8,7 +8,16 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'image/gif',
   'image/heic', 'image/heif',
   'video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v',
+  'video/3gpp', 'video/3gpp2', // common on Android
 ])
+
+// Derive extension from MIME type — camera captures often have no filename extension
+const MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+  'image/gif': 'gif', 'image/heic': 'heic', 'image/heif': 'heif',
+  'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm',
+  'video/x-m4v': 'm4v', 'video/3gpp': '3gp', 'video/3gpp2': '3g2',
+}
 
 const MAX_BYTES = 100 * 1024 * 1024 // 100 MB
 
@@ -26,6 +35,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    log('WARN', 'upload: rejected MIME type', { type: file.type })
     return NextResponse.json({ error: 'File must be an image or video' }, { status: 400 })
   }
 
@@ -33,12 +43,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'File exceeds 100 MB limit' }, { status: 400 })
   }
 
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin'
-  const blob = await put(`sends/${crypto.randomUUID()}.${ext}`, file, {
-    access: 'public',
-    contentType: file.type, // safe — validated against whitelist above
-  })
+  const ext = MIME_TO_EXT[file.type] ?? file.name.split('.').pop()?.toLowerCase() ?? 'bin'
 
-  log('INFO', 'upload: completed', { url: blob.url })
-  return NextResponse.json({ photoUrl: blob.url })
+  try {
+    const blob = await put(`sends/${crypto.randomUUID()}.${ext}`, file, {
+      access: 'public',
+      contentType: file.type, // safe — validated against whitelist above
+    })
+    log('INFO', 'upload: completed', { url: blob.url })
+    return NextResponse.json({ photoUrl: blob.url })
+  } catch (err) {
+    log('ERROR', 'upload: blob put failed', { error: String(err) })
+    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+  }
 }

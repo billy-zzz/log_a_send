@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { BoulderingSendSchema } from '@/lib/types'
-import { logSend, getRecentSends } from '@/services/sendService'
+import { logSend, getAllSends } from '@/services/sendService'
 import { log } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Valid userId required' }, { status: 400 })
   }
 
-  const sends = await getRecentSends(parsed.data)
+  const sends = await getAllSends(parsed.data)
   log('INFO', 'getSends: completed', { userId: parsed.data, count: sends.length })
   return NextResponse.json({ sends })
 }

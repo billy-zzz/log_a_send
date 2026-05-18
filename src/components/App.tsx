@@ -6,7 +6,7 @@ import { LogForm } from './LogForm'
 import { RecentSends } from './RecentSends'
 import { USER_ID } from '@/user'
 
-type Tab = 'log' | 'today'
+type Tab = 'log' | 'sends'
 
 export function App() {
   const [tab, setTab] = useState<Tab>('log')
@@ -21,7 +21,7 @@ export function App() {
             right: tab === 'log' ? '50%' : '4px',
           }}
         />
-        {(['log', 'today'] as Tab[]).map((t) => (
+        {(['log', 'sends'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -29,12 +29,12 @@ export function App() {
               tab === t ? 'text-white' : 'text-neutral-400 hover:text-neutral-300'
             }`}
           >
-            {t === 'log' ? 'Log' : 'Today'}
+            {t === 'log' ? 'Log' : 'Sends'}
           </button>
         ))}
       </div>
       {tab === 'log'
-        ? <LogForm onSuccess={() => setTab('today')} />
+        ? <LogForm onSuccess={() => setTab('sends')} />
         : <RecentSends userId={USER_ID} />
       }
     </MobileContainer>

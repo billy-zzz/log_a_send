@@ -32,12 +32,15 @@ async function uploadAndAttach(file: File, sendId: string): Promise<void> {
 
 export function PostSendSheet({ sendId, grade, onDone }: PostSendSheetProps) {
   const [state, setState] = useState<State>('idle')
-  const fileRef = useRef<HTMLInputElement>(null)
+  const galleryRef = useRef<HTMLInputElement>(null)
+  const captureRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    // Reset input so the same file can be re-selected after an error
+    e.target.value = ''
     setState('uploading')
     try {
       await uploadAndAttach(file, sendId)
@@ -71,27 +74,44 @@ export function PostSendSheet({ sendId, grade, onDone }: PostSendSheetProps) {
             <p className="text-neutral-400 text-sm mt-1">Want to add a photo or video?</p>
           </div>
 
+          {/* Gallery picker — no capture attribute, opens file browser / gallery */}
           <input
-            ref={fileRef}
+            ref={galleryRef}
             type="file"
             accept="image/*,video/*"
+            onChange={handleFile}
+            className="hidden"
+          />
+          {/* Camera capture — opens camera directly */}
+          <input
+            ref={captureRef}
+            type="file"
+            accept="image/*,video/*"
+            capture="environment"
             onChange={handleFile}
             className="hidden"
           />
 
           {state === 'error' && (
             <p className="text-red-400 text-sm text-center bg-red-500/10 rounded-xl px-4 py-3 mb-4">
-              Photo failed — try again or skip.
+              Upload failed — try again or skip.
             </p>
           )}
 
           <div className="flex flex-col gap-3">
             <button
-              onClick={() => fileRef.current?.click()}
+              onClick={() => captureRef.current?.click()}
               disabled={state === 'uploading'}
               className="w-full py-4 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-bold text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
             >
-              {state === 'uploading' ? 'Uploading...' : state === 'error' ? 'Try Again' : 'Add Photo or Video'}
+              {state === 'uploading' ? 'Uploading...' : '📷  Take Photo or Video'}
+            </button>
+            <button
+              onClick={() => galleryRef.current?.click()}
+              disabled={state === 'uploading'}
+              className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white font-semibold text-sm rounded-2xl transition-colors active:scale-[0.98]"
+            >
+              Choose from Gallery
             </button>
             <button
               onClick={onDone}

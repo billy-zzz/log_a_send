@@ -18,7 +18,7 @@ vi.mock('@/lib/db', () => ({
   },
 }))
 
-import { logSend, attachPhoto, getRecentSends } from '../sendService'
+import { logSend, attachPhoto, getAllSends } from '../sendService'
 import type { BoulderingSend } from '@/lib/types'
 
 beforeEach(() => vi.resetAllMocks())
@@ -93,8 +93,8 @@ describe('attachPhoto', () => {
   })
 })
 
-describe('getRecentSends', () => {
-  it('returns sends for today mapped to SendRecord shape', async () => {
+describe('getAllSends', () => {
+  it('returns all sends mapped to SendRecord shape', async () => {
     const now = new Date()
     mockFindMany.mockResolvedValue([{
       id: 'cuid-1', userId: validSend.userId, gymId: validSend.gymId,
@@ -103,13 +103,13 @@ describe('getRecentSends', () => {
       idempotencyKey: 'key',
     }])
 
-    const result = await getRecentSends(validSend.userId)
+    const result = await getAllSends(validSend.userId)
 
     expect(result).toHaveLength(1)
     expect(result[0].id).toBe('cuid-1')
     expect(result[0].sentAt).toBe(now.toISOString())
     expect(mockFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ userId: validSend.userId }) })
+      expect.objectContaining({ where: { userId: validSend.userId } })
     )
   })
 })
