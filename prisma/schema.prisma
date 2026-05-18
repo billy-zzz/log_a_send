@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Send {
+  id             String   @id @default(cuid())
+  userId         String
+  gymId          String
+  scale          String
+  grade          String
+  score          Int
+  attempts       Int
+  photoUrl       String?
+  notes          String?
+  sentAt         DateTime
+  createdAt      DateTime @default(now())
+  idempotencyKey String   @unique
+
+  @@index([userId, sentAt(sort: Desc)])
+}

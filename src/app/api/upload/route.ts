@@ -1,0 +1,44 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { put } from '@vercel/blob'
+import { log } from '@/lib/logger'
+
+// Explicit whitelist — do not use file.type directly for contentType or branching,
+// as it is client-supplied and can be spoofed.
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'image/heic', 'image/heif',
+  'video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v',
+])
+
+const MAX_BYTES = 100 * 1024 * 1024 // 100 MB
+
+export async function POST(request: NextRequest) {
+  // Skip upload in local dev when no token is configured
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    log('WARN', 'upload: BLOB_READ_WRITE_TOKEN not set, skipping upload')
+    return NextResponse.json({ photoUrl: null })
+  }
+
+  const formData = await request.formData()
+  const file = formData.get('file') as File | null
+  if (!file) {
+    return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+  }
+
+  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    return NextResponse.json({ error: 'File must be an image or video' }, { status: 400 })
+  }
+
+  if (file.size > MAX_BYTES) {
+    return NextResponse.json({ error: 'File exceeds 100 MB limit' }, { status: 400 })
+  }
+
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin'
+  const blob = await put(`sends/${crypto.randomUUID()}.${ext}`, file, {
+    access: 'public',
+    contentType: file.type, // safe — validated against whitelist above
+  })
+
+  log('INFO', 'upload: completed', { url: blob.url })
+  return NextResponse.json({ photoUrl: blob.url })
+}
