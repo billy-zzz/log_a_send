@@ -4,10 +4,9 @@ import Image from 'next/image'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, useMotionValue, animate, AnimatePresence } from 'framer-motion'
-import { X, Play } from 'lucide-react'
+import { X, Play, Trash2 } from 'lucide-react'
 import type { SendRecord } from '@/lib/types'
 import { getGymName } from '@/lib/gyms'
-import { Trash2 } from 'lucide-react'
 import { MountainIcon } from './icons'
 
 async function fetchSends(userId: string): Promise<SendRecord[]> {
@@ -81,7 +80,7 @@ function MediaModal({ url, onClose }: { url: string; onClose: () => void }) {
         <div onClick={(e) => e.stopPropagation()}>
           {video
             ? <video src={url} controls autoPlay playsInline className="max-w-full max-h-[85vh] rounded-xl" />
-            : <img src={url} alt="Send media" className="max-w-full max-h-[85vh] rounded-xl object-contain" />
+            : <Image src={url} alt="Send media" width={0} height={0} sizes="100vw" className="max-w-full max-h-[85vh] rounded-xl object-contain w-auto h-auto" />
           }
         </div>
       </motion.div>

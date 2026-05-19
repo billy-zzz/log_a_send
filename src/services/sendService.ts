@@ -4,11 +4,6 @@ import { log } from '@/lib/logger'
 import { BoulderingSend, GradeScale, SendRecord, SendResult } from '@/lib/types'
 import { Prisma } from '@prisma/client'
 
-function idempotencyKey(send: BoulderingSend): string {
-  const minute = send.sentAt.slice(0, 16) // "2025-01-01T12:34"
-  return `${send.userId}#${send.gymId}#${send.grade}#${minute}`
-}
-
 export async function logSend(send: BoulderingSend): Promise<SendResult> {
   try {
     const record = await db.send.create({
@@ -22,13 +17,13 @@ export async function logSend(send: BoulderingSend): Promise<SendResult> {
         photoUrl:       send.photoUrl,
         notes:          send.notes,
         sentAt:         new Date(send.sentAt),
-        idempotencyKey: idempotencyKey(send),
+        idempotencyKey: send.idempotencyKey,
       },
     })
     return { status: 'success', send: { ...send, id: record.id } }
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-      const existing = await db.send.findUnique({ where: { idempotencyKey: idempotencyKey(send) } })
+      const existing = await db.send.findUnique({ where: { idempotencyKey: send.idempotencyKey } })
       return { status: 'duplicate', id: existing?.id ?? 'unknown' }
     }
     throw err

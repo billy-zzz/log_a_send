@@ -101,6 +101,7 @@ export function LogForm({ onSuccess }: { onSuccess?: () => void }) {
       userId: USER_ID, gymId, scale, grade, score,
       attempts, notes: notes || undefined,
       sentAt: new Date().toISOString(),
+      idempotencyKey: crypto.randomUUID(),
     })
     if (!result.success) { setError(result.error.issues[0]?.message ?? 'Invalid'); return }
     mutate(result.data)

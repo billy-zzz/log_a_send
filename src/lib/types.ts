@@ -22,15 +22,16 @@ export const FONT_GRADES: { grade: string; score: number }[] = [
 ]
 
 export const BoulderingSendSchema = z.object({
-  userId:   z.string().uuid(),
-  gymId:    z.string().min(1),
-  scale:    GradeScaleSchema,
-  grade:    z.string().min(1),
-  score:    z.number().int().min(0).max(17),
-  attempts: z.number().int().min(1),
-  photoUrl: z.string().url().optional(),
-  notes:    z.string().max(1000).optional(),
-  sentAt:   z.string().datetime(),
+  userId:          z.string().uuid(),
+  gymId:           z.string().min(1),
+  scale:           GradeScaleSchema,
+  grade:           z.string().min(1),
+  score:           z.number().int().min(0).max(17),
+  attempts:        z.number().int().min(1),
+  photoUrl:        z.string().url().optional(),
+  notes:           z.string().max(1000).optional(),
+  sentAt:          z.string().datetime(),
+  idempotencyKey:  z.string().uuid(),
 })
 
 export type BoulderingSend = z.infer<typeof BoulderingSendSchema>

@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
   }
 
   const formData = await request.formData()
-  const file = formData.get('file') as File | null
-  if (!file) {
+  const file = formData.get('file')
+  if (!(file instanceof File)) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 })
   }
 

@@ -21,13 +21,14 @@ beforeEach(() => vi.resetAllMocks())
 const VALID_USER_ID = '550e8400-e29b-41d4-a716-446655440000'
 
 const validBody: BoulderingSend = {
-  userId:   VALID_USER_ID,
-  gymId:    'boulder-co-westgate',
-  scale:    'V',
-  grade:    'V6',
-  score:    6,
-  attempts: 3,
-  sentAt:   new Date().toISOString(),
+  userId:         VALID_USER_ID,
+  gymId:          'boulder-co-westgate',
+  scale:          'V',
+  grade:          'V6',
+  score:          6,
+  attempts:       3,
+  sentAt:         new Date().toISOString(),
+  idempotencyKey: '123e4567-e89b-12d3-a456-426614174000',
 }
 
 // ─── GET /api/sends ───────────────────────────────────────────────────────────

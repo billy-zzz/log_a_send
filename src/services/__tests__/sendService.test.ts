@@ -24,13 +24,14 @@ import type { BoulderingSend } from '@/lib/types'
 beforeEach(() => vi.resetAllMocks())
 
 const validSend: BoulderingSend = {
-  userId:   '550e8400-e29b-41d4-a716-446655440000',
-  gymId:    'boulder-co-westgate',
-  scale:    'V',
-  grade:    'V6',
-  score:    6,
-  attempts: 5,
-  sentAt:   new Date().toISOString(),
+  userId:         '550e8400-e29b-41d4-a716-446655440000',
+  gymId:          'boulder-co-westgate',
+  scale:          'V',
+  grade:          'V6',
+  score:          6,
+  attempts:       5,
+  sentAt:         new Date().toISOString(),
+  idempotencyKey: '123e4567-e89b-12d3-a456-426614174000',
 }
 
 describe('logSend', () => {
