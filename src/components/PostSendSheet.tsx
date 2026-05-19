@@ -21,11 +21,16 @@ interface PostSendSheetProps {
 
 type State = 'idle' | 'uploading' | 'error'
 
-async function uploadAndAttach(file: File, sendId: string): Promise<void> {
+async function uploadAndAttach(
+  file: File,
+  sendId: string,
+  onProgress: (pct: number) => void,
+): Promise<void> {
   const ext = MIME_TO_EXT[file.type] ?? file.name.split('.').pop()?.toLowerCase() ?? 'bin'
   const blob = await upload(`sends/${crypto.randomUUID()}.${ext}`, file, {
     access: 'public',
     handleUploadUrl: '/api/upload',
+    onUploadProgress: ({ percentage }) => onProgress(percentage),
   })
 
   const patchRes = await fetch(`/api/sends/${sendId}`, {
@@ -37,14 +42,16 @@ async function uploadAndAttach(file: File, sendId: string): Promise<void> {
 }
 
 export function PostSendSheet({ sendId, grade, onDone }: PostSendSheetProps) {
-  const [state, setState] = useState<State>('idle')
-  const inputRef = useRef<HTMLInputElement>(null)
-  const queryClient = useQueryClient()
+  const [state, setState]       = useState<State>('idle')
+  const [progress, setProgress] = useState(0)
+  const inputRef                = useRef<HTMLInputElement>(null)
+  const queryClient             = useQueryClient()
 
   async function processFile(file: File) {
     setState('uploading')
+    setProgress(0)
     try {
-      await uploadAndAttach(file, sendId)
+      await uploadAndAttach(file, sendId, setProgress)
       await queryClient.invalidateQueries({ queryKey: ['sends', USER_ID] })
       onDone()
     } catch {
@@ -96,13 +103,21 @@ export function PostSendSheet({ sendId, grade, onDone }: PostSendSheetProps) {
           )}
 
           <div className="flex flex-col gap-3">
-            <button
-              onClick={() => inputRef.current?.click()}
-              disabled={state === 'uploading'}
-              className="w-full py-4 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-bold text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98]"
-            >
-              {state === 'uploading' ? 'Uploading...' : 'Add Photo or Video'}
-            </button>
+            <div className="relative w-full">
+              <button
+                onClick={() => inputRef.current?.click()}
+                disabled={state === 'uploading'}
+                className="w-full py-4 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-bold text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98] overflow-hidden"
+              >
+                {state === 'uploading' ? `Uploading ${progress}%` : 'Add Photo or Video'}
+              </button>
+              {state === 'uploading' && (
+                <div
+                  className="absolute inset-0 rounded-2xl bg-orange-400/30 pointer-events-none transition-[width] duration-150 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              )}
+            </div>
             <button
               onClick={onDone}
               disabled={state === 'uploading'}
