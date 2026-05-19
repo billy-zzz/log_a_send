@@ -21,7 +21,7 @@ The non-obvious decision is idempotency. The client generates a UUID per submiss
 
 Frontend state is TanStack Query. Sends use an optimistic insert that rolls back the snapshot on error. No global store.
 
-Auth is a `localStorage` UUID — intentional placeholder. Swapping in Clerk or NextAuth touches `src/user.ts` and adds one guard to each handler; the service layer is unchanged.
+Auth is a `localStorage` UUID - intentional placeholder. Swapping in Clerk or NextAuth touches `src/user.ts` and adds one guard to each handler; the service layer is unchanged.
 
 ---
 
@@ -40,7 +40,7 @@ npm run db:push
 npm run dev
 ```
 
-No Vercel Blob account needed — the upload endpoint returns `{ photoUrl: null }` when the token isn't set.
+No Vercel Blob account needed - the upload endpoint returns a 503 when the token isn't set and the UI lets you skip.
 
 ---
 
@@ -58,7 +58,7 @@ CI runs `typecheck → test` on every push. Vercel deploys from `main` independe
 
 ## Known limitations
 
-- **Auth is a placeholder.** `localStorage` UUID — fine for a personal tracker, not for anything multi-user.
+- **Auth is a placeholder.** `localStorage` UUID - fine for a personal tracker, not for anything multi-user.
 - **No per-user upload quotas.** MIME whitelist and 100 MB cap exist; rate limiting doesn't.
 - **No correlation IDs** in the logger, so tracing a single request across log lines takes manual effort.
 - **No integration tests** against a real database.

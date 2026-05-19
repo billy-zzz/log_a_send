@@ -2,8 +2,16 @@
 
 import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { upload } from '@vercel/blob/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { USER_ID } from '@/user'
+
+const MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+  'image/gif': 'gif', 'image/heic': 'heic', 'image/heif': 'heif',
+  'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm',
+  'video/x-m4v': 'm4v', 'video/3gpp': '3gp', 'video/3gpp2': '3g2',
+}
 
 interface PostSendSheetProps {
   sendId: string
@@ -14,18 +22,16 @@ interface PostSendSheetProps {
 type State = 'idle' | 'uploading' | 'error'
 
 async function uploadAndAttach(file: File, sendId: string): Promise<void> {
-  const formData = new FormData()
-  formData.append('file', file)
-
-  const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData })
-  if (!uploadRes.ok) throw new Error('Upload failed')
-  const uploadData = await uploadRes.json() as { photoUrl: string | null }
-  if (!uploadData.photoUrl) return
+  const ext = MIME_TO_EXT[file.type] ?? file.name.split('.').pop()?.toLowerCase() ?? 'bin'
+  const blob = await upload(`sends/${crypto.randomUUID()}.${ext}`, file, {
+    access: 'public',
+    handleUploadUrl: '/api/upload',
+  })
 
   const patchRes = await fetch(`/api/sends/${sendId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId: USER_ID, photoUrl: uploadData.photoUrl }),
+    body: JSON.stringify({ userId: USER_ID, photoUrl: blob.url }),
   })
   if (!patchRes.ok) throw new Error('Failed to attach photo')
 }
