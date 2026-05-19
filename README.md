@@ -17,7 +17,7 @@ graph TD
     Service -->|SQL| DB[(PostgreSQL on Neon)]
 ```
 
-The non-obvious decision is idempotency. Every write computes a key (`userId#gymId#grade#minute`) backed by a DB unique constraint. If the client retries after a timeout it gets the original record back.
+The non-obvious decision is idempotency. The client generates a UUID per submission and sends it as `idempotencyKey`, backed by a DB unique constraint. If the client retries after a timeout it gets the original record back.
 
 Frontend state is TanStack Query. Sends use an optimistic insert that rolls back the snapshot on error. No global store.
 
