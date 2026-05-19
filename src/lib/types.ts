@@ -52,4 +52,3 @@ export type SendRecord = {
 export type SendResult =
   | { status: 'success'; send: BoulderingSend & { id: string } }
   | { status: 'duplicate'; id: string }
-  | { status: 'error'; message: string }

@@ -1,6 +1,6 @@
 # Log A Send
 
-A mobile-first bouldering tracker. Log a send, pick a grade, attach a photo or video if you have one. Session history is there at the end of the day.
+A mobile-first bouldering tracker. Log a send, pick a grade, attach a photo or video if you have one. Tap it in the history to view it back. Session history is there at the end of the day.
 
 **Try it here: [log-a-send.vercel.app](https://log-a-send.vercel.app)**
 
@@ -8,7 +8,7 @@ A mobile-first bouldering tracker. Log a send, pick a grade, attach a photo or v
 
 ## Architecture
 
-Two layers: route handlers own HTTP and validation, services own business logic and Prisma. No repo tier — for one entity it's ceremony, and it's one file to add if that changes.
+Two layers: route handlers own HTTP and validation, services own business logic and Prisma.
 
 ```mermaid
 graph TD
@@ -17,7 +17,7 @@ graph TD
     Service -->|SQL| DB[(PostgreSQL on Neon)]
 ```
 
-The non-obvious decision is idempotency. Every write computes a key (`userId#gymId#grade#minute`) backed by a DB unique constraint. If the client retries after a timeout it gets the original record back — no client-side dedup, no cache to invalidate.
+The non-obvious decision is idempotency. Every write computes a key (`userId#gymId#grade#minute`) backed by a DB unique constraint. If the client retries after a timeout it gets the original record back.
 
 Frontend state is TanStack Query. Sends use an optimistic insert that rolls back the snapshot on error. No global store.
 
@@ -50,7 +50,7 @@ No Vercel Blob account needed — the upload endpoint returns `{ photoUrl: null 
 npm test
 ```
 
-Vitest covers the service layer, all route handlers (happy path + validation errors), gym search, and the `clampAttempts` helper. Handler tests mock the service — unit tests, not integration. A real DB-backed suite is the obvious next step.
+Vitest covers the service layer, all route handlers (happy path + validation errors), gym search, and the `clampAttempts` helper. Handler tests mock the service - unit tests, not integration. A real DB-backed suite is the obvious next step.
 
 CI runs `typecheck → test` on every push. Vercel deploys from `main` independently.
 

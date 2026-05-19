@@ -36,6 +36,5 @@ export async function POST(request: NextRequest) {
   log('INFO', 'logSend: completed', { status: result.status, userId: parsed.data.userId })
 
   if (result.status === 'duplicate') return NextResponse.json(result)
-  if (result.status === 'error') return NextResponse.json(result, { status: 500 })
   return NextResponse.json(result, { status: 201 })
 }
